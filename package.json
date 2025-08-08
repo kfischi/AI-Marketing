@@ -1,1 +1,26 @@
-
+{
+  "name": "ai-marketing-monster",
+  "version": "1.0.0",
+  "description": "🤖 Autonomous AI Marketing System - Netlify Edition",
+  "main": "netlify/functions/server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "netlify dev",
+    "build": "npm install",
+    "deploy": "netlify deploy --prod"
+  },
+  "dependencies": {
+    "@netlify/functions": "^2.4.0",
+    "express": "^4.18.2",
+    "serverless-http": "^3.2.0",
+    "node-cron": "^3.0.3",
+    "dotenv": "^16.3.1",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
