@@ -1,21 +1,237 @@
-[build]
-  functions = "netlify/functions"
-  command = "npm install"
-  publish = "public"
+# ==============================================
+# NETLIFY CONFIGURATION - AI MARKETING MONSTER
+# ==============================================
 
-[build.environment]
-  NODE_VERSION = "18"
+[build]
+  # Build settings
+  base = "."
+  publish = "public"
+  command = "npm run build"
+  
+  # Environment variables for build
+  environment = { NODE_VERSION = "18" }
+
+# ==============================================
+# 🚀 NETLIFY FUNCTIONS CONFIGURATION
+# ==============================================
+
+[functions]
+  # Function directory
+  directory = "netlify/functions"
+  
+  # Function timeout (max 10 seconds for free tier)
+  timeout = 10
+  
+  # Memory limit
+  memory = 1024
+
+# ==============================================
+# 📡 API ROUTES & REDIRECTS
+# ==============================================
 
 [[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
+  # Main dashboard
+  from = "/"
+  to = "/index.html"
   status = 200
 
 [[redirects]]
+  # API routes to functions
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  # Dashboard routes
+  from = "/dashboard"
+  to = "/dashboard.html"
+  status = 200
+
+[[redirects]]
+  # Analytics routes
+  from = "/analytics"
+  to = "/analytics.html"
+  status = 200
+
+[[redirects]]
+  # Health check
+  from = "/health"
+  to = "/.netlify/functions/health"
+  status = 200
+
+[[redirects]]
+  # Content generation
+  from = "/generate"
+  to = "/.netlify/functions/generate-content"
+  status = 200
+
+[[redirects]]
+  # Social media posting
+  from = "/post/*"
+  to = "/.netlify/functions/social-post"
+  status = 200
+
+[[redirects]]
+  # Catch-all for SPA
   from = "/*"
   to = "/index.html"
   status = 200
 
-[functions]
-  node_bundler = "esbuild"
-  external_node_modules = ["express"]
+# ==============================================
+# 🔒 SECURITY HEADERS
+# ==============================================
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.anthropic.com https://graph.facebook.com https://api.linkedin.com"
+
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With"
+
+# ==============================================
+# 🌐 ENVIRONMENT-SPECIFIC SETTINGS
+# ==============================================
+
+[context.production]
+  environment = { NODE_ENV = "production" }
+  
+[context.deploy-preview]
+  environment = { NODE_ENV = "preview" }
+  
+[context.branch-deploy]
+  environment = { NODE_ENV = "development" }
+
+# ==============================================
+# 📦 PLUGINS
+# ==============================================
+
+[[plugins]]
+  package = "@netlify/plugin-functions-install-core"
+
+[[plugins]]
+  package = "netlify-plugin-minify-html"
+  
+[[plugins]]
+  package = "netlify-plugin-inline-critical-css"
+
+# ==============================================
+# 🔧 DEVELOPMENT SETTINGS
+# ==============================================
+
+[dev]
+  # Local development server
+  command = "npm run dev"
+  port = 3000
+  targetPort = 3000
+  publish = "public"
+  autoLaunch = true
+  
+  # Environment variables for local dev
+  [dev.env]
+    NODE_ENV = "development"
+
+# ==============================================
+# 📊 ANALYTICS & MONITORING
+# ==============================================
+
+[template.environment]
+  CLAUDE_API_KEY = "Get from https://console.anthropic.com/"
+  INSTAGRAM_ACCESS_TOKEN = "Get from Facebook Developers"
+  NODE_ENV = "production"
+
+# ==============================================
+# 🚨 ERROR HANDLING
+# ==============================================
+
+[[redirects]]
+  from = "/404"
+  to = "/404.html"
+  status = 404
+
+[[redirects]]
+  from = "/500"
+  to = "/500.html"
+  status = 500
+
+# ==============================================
+# 📝 CACHE CONTROL
+# ==============================================
+
+[[headers]]
+  for = "/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+# ==============================================
+# 🔄 FORM HANDLING
+# ==============================================
+
+[forms]
+  # Enable Netlify Forms
+  spa = true
+
+# ==============================================
+# 🎯 SPLIT TESTING (Optional)
+# ==============================================
+
+# [split_tests]
+#   [[split_tests.branches]]
+#     name = "main"
+#     value = 50
+#   [[split_tests.branches]]
+#     name = "feature-branch"
+#     value = 50
+
+# ==============================================
+# 📈 ANALYTICS INTEGRATION
+# ==============================================
+
+# [analytics]
+#   provider = "google"
+#   tracking_id = "G-XXXXXXXXXX"
+
+# ==============================================
+# 🔔 NOTIFICATIONS
+# ==============================================
+
+# [notifications]
+#   email = "your-email@example.com"
+#   slack = "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+
+# ==============================================
+# 💡 OPTIMIZATION NOTES
+# ==============================================
+
+# 1. Functions are automatically optimized for cold starts
+# 2. Static assets are served from global CDN
+# 3. HTML/CSS/JS are automatically minified
+# 4. Images are automatically optimized
+# 5. Security headers are applied automatically
+# 6. HTTPS is enforced by default
+# 7. HTTP/2 is enabled automatically
