@@ -8,15 +8,18 @@ export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
 
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    return res.status(200).end();
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ 
+      success: false, 
+      error: 'Method not allowed. Use POST.' 
+    });
   }
 
   try {
+    console.log('🤖 Generating content...');
     const content = await generateContent();
     
     const response = {
@@ -24,13 +27,15 @@ export default async function handler(req, res) {
       message: "Content generated successfully!",
       content: content,
       timestamp: new Date().toISOString(),
-      platforms: ["facebook", "instagram", "linkedin"],
-      aiUsed: content.source
+      platforms: ["facebook", "instagram", "linkedin"]
     };
 
-    res.status(200).json(response);
+    console.log('✅ Content generated successfully');
+    return res.status(200).json(response);
+    
   } catch (error) {
-    res.status(500).json({
+    console.error('❌ Generate content error:', error);
+    return res.status(500).json({
       success: false,
       error: error.message,
       timestamp: new Date().toISOString()
@@ -39,35 +44,57 @@ export default async function handler(req, res) {
 }
 
 async function generateContent() {
-  const prompts = [
-    "Create an engaging social media post about Real Mute's 50dB noise reduction technology for trumpet practice.",
-    "Write about how Real Mute solves apartment practice problems for brass musicians.",
-    "Create content about maintaining perfect intonation while practicing silently with Real Mute.",
-    "Write about the freedom Real Mute gives musicians to practice anytime, anywhere.",
-    "Create a motivational post about consistent practice habits using Real Mute technology.",
-    "Write about Real Mute being perfect for backstage warmups and recording studios.",
-    "Create content about how Real Mute preserves embouchure and prevents bad habits.",
-    "Write about the science behind Real Mute's acoustic engineering breakthrough.",
-    "Create content about Real Mute testimonials from professional musicians.",
-    "Write about how Real Mute helps music students practice in dorms and apartments."
+  const contentTemplates = [
+    {
+      text: "🌅 Start your day with perfect practice! Real Mute's 50dB noise reduction means you can warm up anytime without disturbing anyone. Perfect intonation, zero complaints! 🎺 www.realmute.com #MorningPractice #RealMute #SilentPractice #TrumpetLife",
+      type: "motivational"
+    },
+    {
+      text: "💡 Practice Tip: Maintain your embouchure strength even with a mute! Real Mute's zero back-pressure design lets you practice exactly like you perform. Transform your routine today! 🎯 realmute.com/guide #PracticeTips #TrumpetTechnique #MusicEducation",
+      type: "educational"
+    },
+    {
+      text: "🏠 Apartment living doesn't mean giving up your music! Real Mute technology delivers studio-quality silent practice. Your neighbors will thank you! 🤫 Try it risk-free: realmute.com/demo #ApartmentPractice #SilentMusic #BrassInstruments",
+      type: "lifestyle"
+    },
+    {
+      text: "🎭 Behind the scenes: Professional musicians use Real Mute for backstage warmups before major performances. No sound leakage, perfect preparation! What's your pre-performance routine? 🎪 realmute.com/shop #ProfessionalMusic #BackstagePractice",
+      type: "professional"
+    },
+    {
+      text: "🌙 Late night inspiration hitting? With Real Mute, practice when creativity strikes - not when it's convenient for others. 24/7 musical freedom awaits! ⭐ www.realmute.com #LateNightPractice #MusicalInspiration #PracticeAnytime",
+      type: "inspirational"
+    },
+    {
+      text: "🎺 Recording session ready! Real Mute isn't just for silent practice - it's perfect for controlled studio environments too. Professional results every time! 🎙️ realmute.com/professional #StudioRecording #MusicProduction #ProfessionalGear",
+      type: "studio"
+    },
+    {
+      text: "🎓 Music teachers love Real Mute! Finally, students can practice more without noise complaints. Better practice habits = better results! 📚 Special educator pricing: realmute.com/educators #MusicEducation #TeachingTools #StudentSuccess",
+      type: "education"
+    },
+    {
+      text: "⏰ Practice on YOUR schedule! Real Mute's revolutionary 50dB reduction means morning, noon, or night - your choice! Freedom to improve whenever inspiration strikes! 🚀 www.realmute.com #PracticeAnytime #MusicalFreedom #RealMute",
+      type: "freedom"
+    }
   ];
 
-  const selectedPrompt = prompts[Math.floor(Math.random() * prompts.length)];
-
-  const basePrompt = `${selectedPrompt}
-
-Requirements:
-- Keep under 200 characters for main content
-- Include relevant emojis
-- Add a clear call-to-action
-- Make it engaging and authentic
-- Focus on Real Mute benefits
-- End with 2-3 relevant hashtags
-- DO NOT include website links - we'll add them separately`;
-
-  // Try Claude first
+  // If Claude API is configured, try to use it
   if (process.env.CLAUDE_API_KEY) {
     try {
+      console.log('🧠 Using Claude AI for content generation...');
+      const prompt = `Create an engaging social media post about Real Mute's practice mute technology. 
+
+Requirements:
+- Keep under 280 characters
+- Include relevant emojis
+- Add a clear call-to-action with website link
+- Make it engaging and authentic
+- Focus on Real Mute benefits (50dB noise reduction, perfect intonation, zero back-pressure)
+- End with relevant hashtags
+
+Choose from these angles: practice freedom, apartment living, professional use, education, or motivation.`;
+
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -78,130 +105,36 @@ Requirements:
         body: JSON.stringify({
           model: 'claude-3-sonnet-20240229',
           max_tokens: 300,
-          messages: [{ role: 'user', content: basePrompt }]
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        return addLinksToContent(data.content[0].text, "claude-ai", selectedPrompt);
-      }
-    } catch (error) {
-      console.error('Claude API error:', error);
-    }
-  }
-
-  // Try OpenAI GPT if Claude fails
-  if (process.env.OPENAI_API_KEY) {
-    try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4',
-          max_tokens: 200,
-          messages: [{ role: 'user', content: basePrompt }]
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        return addLinksToContent(data.choices[0].message.content, "openai-gpt4", selectedPrompt);
-      }
-    } catch (error) {
-      console.error('OpenAI API error:', error);
-    }
-  }
-
-  // Try Google Gemini if others fail
-  if (process.env.GEMINI_API_KEY) {
-    try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{ text: basePrompt }]
+          messages: [{
+            role: 'user',
+            content: prompt
           }]
         })
       });
 
       if (response.ok) {
         const data = await response.json();
-        return addLinksToContent(data.candidates[0].content.parts[0].text, "google-gemini", selectedPrompt);
+        console.log('✅ Claude AI content generated');
+        return {
+          text: data.content[0].text,
+          source: "claude-ai",
+          type: "ai-generated"
+        };
+      } else {
+        console.log('⚠️ Claude API failed, using fallback content');
       }
     } catch (error) {
-      console.error('Gemini API error:', error);
+      console.error('Claude API error:', error);
     }
   }
 
-  // Enhanced fallback content with website links
-  const fallbackContent = [
-    "🎺 Practice without limits! Real Mute's 50dB noise reduction lets you play anytime, anywhere. Perfect intonation, zero back-pressure. #RealMute #SilentPractice",
-    
-    "🏠 Apartment living doesn't mean giving up your music! Real Mute technology delivers studio-quality silent practice. Your neighbors will thank you! 🤫 #RealMute #ApartmentPractice",
-    
-    "⏰ Late night practice session? Early morning warmup? With Real Mute, practice on YOUR schedule. 50dB noise reduction = unlimited practice time! #RealMute #PracticeAnytime",
-    
-    "🎯 Maintain perfect pitch while practicing silently! Real Mute preserves your instrument's natural intonation. No more compromising! #RealMute #PerfectPitch",
-    
-    "💪 Consistency is key to musical excellence. Real Mute removes all barriers to daily practice. Practice more, improve faster! #RealMute #DailyPractice",
-    
-    "🎭 Backstage warmups just got easier! Real Mute lets you prepare without disturbing anyone. Professional musicians trust Real Mute! #RealMute #Professional",
-    
-    "🔬 Revolutionary acoustic engineering meets practical design. Real Mute's 50dB reduction isn't just quiet - it's scientifically precise! #RealMute #Innovation",
-    
-    "🎼 Recording studios love Real Mute for control room practice and silent overdubs. Zero interference, perfect sound isolation! #RealMute #Studio",
-    
-    "⭐ 'Finally, a mute that doesn't compromise my sound!' - Professional musician testimonial. Experience the Real Mute difference! #RealMute #Testimonial",
-    
-    "🎓 Music students rejoice! Practice in your dorm without complaints. Real Mute makes silent practice sessions incredibly effective! #RealMute #Students"
-  ];
-
-  const selectedContent = fallbackContent[Math.floor(Math.random() * fallbackContent.length)];
-  return addLinksToContent(selectedContent, "fallback", selectedPrompt);
-}
-
-function addLinksToContent(content, source, prompt) {
-  // Clean the content
-  let cleanContent = content.trim();
-  
-  // Randomly choose between different link strategies
-  const linkTypes = [
-    // Main website
-    {
-      text: "\n\n🌐 Discover Real Mute: www.realmute.com",
-      cta: "🛒 Order yours today!"
-    },
-    // Practice guide
-    {
-      text: "\n\n🎯 Free Practice Guide: realmute.com/guide",
-      cta: "📖 Download now!"
-    },
-    // Product page
-    {
-      text: "\n\n🎺 Shop Real Mute: realmute.com/shop",
-      cta: "✨ Transform your practice!"
-    },
-    // Demo page
-    {
-      text: "\n\n🎧 Hear the difference: realmute.com/demo",
-      cta: "🔊 Listen to samples!"
-    }
-  ];
-
-  const selectedLink = linkTypes[Math.floor(Math.random() * linkTypes.length)];
+  // Fallback to template content
+  const selectedTemplate = contentTemplates[Math.floor(Math.random() * contentTemplates.length)];
+  console.log('📝 Using template content');
   
   return {
-    text: cleanContent + selectedLink.text + "\n" + selectedLink.cta,
-    source: source,
-    prompt: prompt,
-    hasWebsiteLink: true,
-    linkType: selectedLink.text.includes('www.') ? 'main_website' : 'landing_page'
+    text: selectedTemplate.text,
+    source: "template",
+    type: selectedTemplate.type
   };
 }
