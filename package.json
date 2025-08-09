@@ -1,48 +1,30 @@
 {
-  "name": "ai-marketing-monster",
-  "version": "1.0.0",
-  "description": "AI-powered autonomous social media marketing system that generates and publishes content automatically across multiple platforms",
+  "name": "ai-marketing-monster-v2",
+  "version": "2.0.0",
+  "description": "Advanced AI-powered marketing automation with multi-platform content generation",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "build": "npm install && echo 'Build completed successfully - Static files ready'",
-    "test": "echo 'No tests specified' && exit 0",
-    "deploy": "netlify deploy --prod",
-    "local": "netlify dev",
-    "postinstall": "echo 'AI Marketing Monster dependencies installed successfully'"
+    "build": "npm install",
+    "test": "echo 'Tests will be added' && exit 0"
   },
   "keywords": [
     "ai",
-    "marketing", 
+    "marketing",
     "automation",
-    "social-media",
-    "claude-ai",
-    "instagram",
+    "claude",
     "facebook",
     "linkedin",
-    "content-generation",
-    "netlify",
-    "real-mute"
+    "instagram",
+    "twitter",
+    "content-generation"
   ],
-  "author": {
-    "name": "Real Mute Technologies",
-    "email": "info@realmute.com",
-    "url": "https://realmute.com"
-  },
+  "author": "Real Mute Technologies",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/kfischi/AI-Marketing.git"
-  },
-  "bugs": {
-    "url": "https://github.com/kfischi/AI-Marketing/issues"
-  },
-  "homepage": "https://github.com/kfischi/AI-Marketing#readme",
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=8.0.0"
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -56,64 +38,15 @@
     "moment-timezone": "^0.5.43",
     "lodash": "^4.17.21",
     "uuid": "^9.0.1",
-    "multer": "^1.4.5-lts.1",
     "compression": "^1.7.4",
     "rate-limiter-flexible": "^2.4.2",
     "express-rate-limit": "^7.1.5",
-    "express-slow-down": "^2.0.1",
     "jsonwebtoken": "^9.0.2",
-    "bcryptjs": "^2.4.3",
     "validator": "^13.11.0",
-    "sanitize-html": "^2.11.0",
-    "cheerio": "^1.0.0-rc.12",
-    "sharp": "^0.32.6",
-    "form-data": "^4.0.0",
-    "node-fetch": "^3.3.2",
-    "ws": "^8.14.2",
-    "socket.io": "^4.7.5",
-    "nodemailer": "^6.9.7",
     "winston": "^3.11.0",
-    "winston-daily-rotate-file": "^4.7.1"
+    "form-data": "^4.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2",
-    "jest": "^29.7.0",
-    "supertest": "^6.3.3",
-    "eslint": "^8.54.0",
-    "prettier": "^3.1.0",
-    "@netlify/functions": "^2.4.1"
-  },
-  "optionalDependencies": {
-    "@netlify/plugin-functions-install-core": "^1.0.0"
-  },
-  "browserslist": [
-    "> 1%",
-    "last 2 versions",
-    "not dead"
-  ],
-  "config": {
-    "port": 3000,
-    "environment": "production"
-  },
-  "funding": {
-    "type": "github",
-    "url": "https://github.com/sponsors/kfischi"
-  },
-  "contributors": [
-    {
-      "name": "AI Marketing Monster",
-      "email": "ai@realmute.com"
-    }
-  ],
-  "private": false,
-  "publishConfig": {
-    "registry": "https://registry.npmjs.org/"
-  },
-  "files": [
-    "server.js",
-    "public/",
-    "netlify.toml",
-    "README.md",
-    "QUICK_START.md"
-  ]
+    "nodemon": "^3.0.2"
+  }
 }
