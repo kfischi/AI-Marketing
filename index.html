@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Mute AI Marketing Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: rgba(255,255,255,0.15);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+        }
+        
+        .card h3 {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #FFD700;
+        }
+        
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 1.1em;
+        }
+        
+        .stat-value {
+            font-weight: bold;
+            color: #90EE90;
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border-radius: 50px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn.secondary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+        }
+        
+        .btn.danger {
+            background: linear-gradient(45deg, #FF4757, #FF3838);
+        }
+        
+        .status {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .status.success {
+            background: rgba(76, 175, 80, 0.3);
+            border: 1px solid #4CAF50;
+        }
+        
+        .status.error {
+            background: rgba(244, 67, 54, 0.3);
+            border: 1px solid #F44336;
+        }
+        
+        .content-feed {
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin-top: 30px;
+        }
+        
+        .content-item {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid #FFD700;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid #FFD700;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .platform-status {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .platform-badge {
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        
+        .platform-badge.success {
+            background: #4CAF50;
+        }
+        
+        .platform-badge.error {
+            background: #F44336;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎺 Real Mute AI Marketing</h1>
+            <p>Automated Content Generation & Social Media Publishing</p>
+        </div>
+        
+        <div class="dashboard">
+            <div class="card">
+                <h3>📊 System Statistics</h3>
+                <div class="stat">
+                    <span>Total Content:</span>
+                    <span class="stat-value" id="totalGenerated">0</span>
+                </div>
+                <div class="stat">
+                    <span>Posted:</span>
+                    <span class="stat-value" id="totalPosted">0</span>
+                </div>
+                <div class="stat">
+                    <span>Ready to Post:</span>
+                    <span class="stat-value" id="readyToPost">1</span>
+                </div>
+                <div class="stat">
+                    <span>All Time:</span>
+                    <span class="stat-value" id="allTime">0</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>🤖 AI Providers Status</h3>
+                <div class="stat">
+                    <span>🧠 Claude AI:</span>
+                    <span class="stat-value" id="claudeStatus">Configured</span>
+                </div>
+                <div class="stat">
+                    <span>🔄 Smart Fallback:</span>
+                    <span class="stat-value">Always available</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>📱 Recent AI-Generated Content</h3>
+                <div id="recentContent">
+                    <p>No posts yet. Generate content and post to Facebook!</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>📘 Facebook Posts</h3>
+                <div id="facebookPosts">
+                    <p>No posts yet. Generate content and post to Facebook!</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn" onclick="generateContent()">
+                🚀 Generate AI Content
+            </button>
+            <button class="btn secondary" onclick="testFacebook()">
+                🧪 Test Facebook
+            </button>
+            <button class="btn secondary" onclick="refreshData()">
+                🔄 Refresh
+            </button>
+            <button class="btn danger" onclick="clearData()">
+                🗑️ Clear All
+            </button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing...</p>
+        </div>
+
+        <div class="status" id="status"></div>
+
+        <div class="content-feed">
+            <h3>📝 Recent Content Feed</h3>
+            <div id="contentFeed">
+                <p>Content will appear here after generation...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/.netlify/functions/api';
+        
+        // Show loading
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+        }
+        
+        // Hide loading
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+        
+        // Show status message
+        function showStatus(message, type = 'success') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+            
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Load dashboard data
+        async function loadData() {
+            try {
+                const response = await fetch(API_BASE);
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateStats(data.stats);
+                    updateContent(data.recentContent || []);
+                }
+            } catch (error) {
+                console.error('Failed to load data:', error);
+                showStatus('Failed to load dashboard data', 'error');
+            }
+        }
+        
+        // Update statistics
+        function updateStats(stats) {
+            document.getElementById('totalGenerated').textContent = stats.totalGenerated || 0;
+            document.getElementById('totalPosted').textContent = stats.totalPosted || 0;
+        }
+        
+        // Update content display
+        function updateContent(content) {
+            const recentContent = document.getElementById('recentContent');
+            const facebookPosts = document.getElementById('facebookPosts');
+            const contentFeed = document.getElementById('contentFeed');
+            
+            if (content.length === 0) {
+                recentContent.innerHTML = '<p>No content generated yet.</p>';
+                facebookPosts.innerHTML = '<p>No Facebook posts yet.</p>';
+                contentFeed.innerHTML = '<p>Generate content to see it here...</p>';
+                return;
+            }
+            
+            // Show recent content
+            const latest = content[0];
+            recentContent.innerHTML = `
+                <div class="content-item">
+                    <p><strong>Latest:</strong> ${latest.text?.substring(0, 100)}...</p>
+                    <small>Generated: ${new Date(latest.timestamp).toLocaleString()}</small>
+                </div>
+            `;
+            
+            // Show Facebook posts
+            const fbPosts = content.filter(c => 
+                c.results?.some(r => r.platform === 'facebook' && r.success)
+            );
+            
+            if (fbPosts.length > 0) {
+                facebookPosts.innerHTML = fbPosts.map(post => `
+                    <div class="content-item">
+                        <p>${post.text?.substring(0, 80)}...</p>
+                        <div class="platform-status">
+                            ${post.results?.map(r => `
+                                <span class="platform-badge ${r.success ? 'success' : 'error'}">
+                                    ${r.platform}: ${r.success ? '✅' : '❌'}
+                                </span>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                facebookPosts.innerHTML = '<p>No successful Facebook posts yet.</p>';
+            }
+            
+            // Show content feed
+            contentFeed.innerHTML = content.map(item => `
+                <div class="content-item">
+                    <p><strong>Content:</strong> ${item.text}</p>
+                    <div class="platform-status">
+                        ${item.results?.map(r => `
+                            <span class="platform-badge ${r.success ? 'success' : 'error'}">
+                                ${r.platform}: ${r.success ? '✅' : '❌'}
+                            </span>
+                        `).join('') || ''}
+                    </div>
+                    <small>Generated: ${new Date(item.timestamp).toLocaleString()}</small>
+                </div>
+            `).join('');
+        }
+        
+        // Generate content
+        async function generateContent() {
+            showLoading();
+            try {
+                const response = await fetch(`${API_BASE}/generate`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showStatus('Content generated and posted successfully! 🎉');
+                    
+                    // Show results
+                    const results = data.results || [];
+                    const successful = results.filter(r => r.success).length;
+                    const failed = results.filter(r => !r.success).length;
+                    
+                    showStatus(`Posted to ${successful} platform(s). ${failed} failed.`, 
+                              failed > 0 ? 'error' : 'success');
+                    
+                    // Reload data
+                    setTimeout(loadData, 1000);
+                } else {
+                    showStatus(`Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus('Failed to generate content', 'error');
+                console.error('Generate error:', error);
+            }
+            hideLoading();
+        }
+        
+        // Test Facebook specifically
+        async function testFacebook() {
+            showLoading();
+            try {
+                const response = await fetch(`${API_BASE}/test-facebook`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.result?.success) {
+                    showStatus('Facebook test successful! ✅');
+                } else {
+                    showStatus(`Facebook test failed: ${data.result?.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus('Facebook test failed', 'error');
+                console.error('Facebook test error:', error);
+            }
+            hideLoading();
+        }
+        
+        // Refresh data
+        async function refreshData() {
+            showLoading();
+            await loadData();
+            hideLoading();
+            showStatus('Data refreshed');
+        }
+        
+        // Clear all data
+        async function clearData() {
+            if (!confirm('Are you sure you want to clear all data?')) return;
+            
+            showLoading();
+            try {
+                const response = await fetch(`${API_BASE}/clear`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showStatus('All data cleared');
+                    loadData();
+                } else {
+                    showStatus('Failed to clear data', 'error');
+                }
+            } catch (error) {
+                showStatus('Failed to clear data', 'error');
+            }
+            hideLoading();
+        }
+        
+        // Load data on page load
+        window.addEventListener('load', loadData);
+        
+        // Auto-refresh every 30 seconds
+        setInterval(loadData, 30000);
+    </script>
+</body>
+</html>
