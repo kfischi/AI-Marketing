@@ -1,28 +1,51 @@
-// 🚀 AI Marketing Monster - Netlify Function
+// 🚀 AI Marketing Monster - Multi-AI Content Generation System
 const axios = require('axios');
 
-// 🔧 Configuration from environment variables
-const CONFIG = {
-  CLAUDE_API_KEY: process.env.CLAUDE_API_KEY,
-  FACEBOOK_ACCESS_TOKEN: process.env.FACEBOOK_ACCESS_TOKEN,
-  FACEBOOK_PAGE_ID: process.env.FACEBOOK_PAGE_ID,
-  BRAND: {
-    name: 'Real Mute Technologies',
-    product: 'Real Mute',
-    website: 'https://realmute.com',
-    landingPage: process.env.LANDING_PAGE_URL || 'https://real-mute-lp.netlify.app'
+// 💾 Enhanced storage
+let STORAGE = {
+  posts: [],
+  contentQueue: [],
+  analytics: { 
+    totalPosts: 0, 
+    systemStatus: 'active',
+    aiProviders: {
+      claude: { used: 0, errors: 0 },
+      openai: { used: 0, errors: 0 },
+      gemini: { used: 0, errors: 0 },
+      fallback: { used: 0, errors: 0 }
+    }
   }
 };
 
-// 💾 Simple in-memory storage (in production, use external DB)
-let STORAGE = {
-  posts: [],
-  analytics: {
-    totalPosts: 0,
-    systemStatus: 'active'
-  },
-  contentQueue: []
-};
+// 🎨 Fallback templates (in case all APIs fail)
+const FALLBACK_TEMPLATES = [
+  {
+    topic: "Silent Practice Revolution",
+    facebook: "🎺 Tired of neighbors complaining about your practice sessions? Real Mute's revolutionary 50dB noise reduction changes everything! Now you can practice anytime, anywhere - from apartment living to hotel rooms. Perfect intonation maintained, zero compromise on your sound quality. Join thousands of musicians who've discovered the freedom of silent practice! #RealMute #SilentPractice #TrumpetLife #MusicianLife",
+    linkedin: "The future of musical practice is here. Real Mute Technologies has engineered a breakthrough in acoustic design - delivering 50dB noise reduction while maintaining perfect intonation. For music educators, conservatories, and professional musicians, this represents a paradigm shift in how we approach practice space limitations. This innovation opens new possibilities for urban music education and professional development. #MusicEducation #Innovation #AcousticTechnology",
+    instagram: "Practice anywhere, anytime! 🎺✨ Real Mute's 50dB noise reduction = apartment-friendly sessions that don't wake the neighbors 😴 Perfect for late-night practice, hotel rooms, or tiny spaces. Your sound stays perfect, the volume drops to whisper-quiet! 🤫🎵 #RealMute #SilentPractice #TrumpetLife #MusicianProblems #ApartmentLiving #PracticeAnywhere #MusicTech #BrassLife #QuietPractice #MusicianHacks",
+    twitter: "🎺 50dB noise reduction = apartment-friendly practice that doesn't compromise your sound! Real Mute is changing how musicians practice. No more angry neighbors! 🤫 #RealMute #SilentPractice #TrumpetLife"
+  }
+];
+
+// 🎯 Content topics for AI generation
+const CONTENT_TOPICS = [
+  'silent practice tips for apartment musicians',
+  'how 50dB noise reduction changes everything',
+  'perfect intonation while practicing quietly',
+  'Real Mute vs traditional practice mutes comparison',
+  'late night practice sessions made possible',
+  'hotel room practice for touring musicians',
+  'neighbor-friendly music practice',
+  'breakthrough practice mute technology',
+  'maintaining embouchure with practice mutes',
+  'professional musicians testimonials',
+  'music student practice challenges solved',
+  'acoustic engineering behind Real Mute',
+  'practice efficiency tips',
+  'conservatory practice room solutions',
+  'urban musician lifestyle benefits'
+];
 
 // 🤖 Claude AI Integration
 class ClaudeAI {
@@ -31,14 +54,12 @@ class ClaudeAI {
     this.baseURL = 'https://api.anthropic.com/v1/messages';
   }
 
-  async generateMultiPlatformContent(topic) {
-    const prompt = `
-You are an expert social media marketing AI for Real Mute Technologies, a company that makes revolutionary practice mutes for brass instruments with 50dB noise reduction.
+  async generateContent(topic) {
+    const prompt = `You are an expert social media marketing AI for Real Mute Technologies, a company that makes revolutionary practice mutes for brass instruments with 50dB noise reduction.
 
 Generate engaging social media content about: ${topic}
 
 Create content for these platforms:
-
 1. FACEBOOK (casual, community-focused, 100-200 words)
 2. LINKEDIN (professional, B2B, 150-250 words)  
 3. INSTAGRAM (visual-focused, hashtag-rich, 80-150 words)
@@ -59,8 +80,7 @@ Return as JSON:
   "topic": "${topic}"
 }
 
-Generate authentic, valuable content that musicians will engage with.
-`;
+Generate authentic, valuable content that musicians will engage with.`;
 
     try {
       const response = await axios.post(this.baseURL, {
@@ -79,72 +99,235 @@ Generate authentic, valuable content that musicians will engage with.
       const content = response.data.content[0].text;
       
       try {
-        return JSON.parse(content);
+        return { success: true, data: JSON.parse(content), provider: 'claude' };
       } catch {
-        return {
-          facebook: content.substring(0, 300),
-          linkedin: content.substring(0, 400),
-          instagram: content.substring(0, 200) + '\n\n#realmute #practicemate #silentpractice #brassmusic',
-          twitter: content.substring(0, 200) + ' #realmute #silentpractice',
-          topic: topic
-        };
+        return { success: true, data: this.parseContentFallback(content, topic), provider: 'claude' };
       }
     } catch (error) {
-      console.error('Claude API error:', error);
-      throw new Error('Failed to generate content');
+      console.error('Claude API error:', error.message);
+      return { success: false, error: error.message };
     }
   }
-}
 
-// 📘 Facebook API
-class FacebookAPI {
-  constructor(accessToken, pageId) {
-    this.accessToken = accessToken;
-    this.pageId = pageId;
-  }
-
-  async postToPage(message, link = null) {
-    if (!this.accessToken || !this.pageId) {
-      throw new Error('Facebook credentials not configured');
-    }
-
-    const postData = {
-      message: message,
-      access_token: this.accessToken
+  parseContentFallback(content, topic) {
+    return {
+      facebook: content.substring(0, 300),
+      linkedin: content.substring(0, 400),
+      instagram: content.substring(0, 200) + '\n\n#realmute #practicemate #silentpractice #brassmusic',
+      twitter: content.substring(0, 200) + ' #realmute #silentpractice',
+      topic: topic
     };
-
-    if (link) postData.link = link;
-
-    const response = await axios.post(
-      `https://graph.facebook.com/v18.0/${this.pageId}/feed`,
-      postData
-    );
-
-    return response.data;
   }
 }
 
-// 🎨 Content topics
-const contentTopics = [
-  'silent practice tips for apartment musicians',
-  'how 50dB noise reduction changes everything',
-  'perfect intonation while practicing quietly',
-  'Real Mute vs traditional practice mutes comparison',
-  'late night practice sessions made possible',
-  'hotel room practice for touring musicians',
-  'neighbor-friendly music practice',
-  'breakthrough practice mute technology',
-  'maintaining embouchure with practice mutes',
-  'professional musicians testimonials'
-];
+// 🧠 OpenAI Integration
+class OpenAI {
+  constructor(apiKey) {
+    this.apiKey = apiKey;
+    this.baseURL = 'https://api.openai.com/v1/chat/completions';
+  }
 
-// 📊 Dashboard HTML
+  async generateContent(topic) {
+    const prompt = `Create social media content for Real Mute Technologies about: ${topic}
+
+Real Mute is a revolutionary practice mute with 50dB noise reduction that maintains perfect intonation.
+
+Create platform-specific content:
+1. Facebook (casual, engaging, 100-200 words)
+2. LinkedIn (professional, B2B focus, 150-250 words)
+3. Instagram (visual, hashtag-rich, 80-150 words with hashtags)
+4. Twitter (concise, under 280 characters)
+
+Return ONLY valid JSON:
+{
+  "facebook": "content here",
+  "linkedin": "content here",
+  "instagram": "content here", 
+  "twitter": "content here",
+  "topic": "${topic}"
+}`;
+
+    try {
+      const response = await axios.post(this.baseURL, {
+        model: 'gpt-3.5-turbo',
+        messages: [
+          { role: 'system', content: 'You are a social media expert for Real Mute Technologies. Return only valid JSON.' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 1500,
+        temperature: 0.7
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        timeout: 30000
+      });
+
+      const content = response.data.choices[0].message.content;
+      
+      try {
+        return { success: true, data: JSON.parse(content), provider: 'openai' };
+      } catch {
+        return { success: true, data: this.parseContentFallback(content, topic), provider: 'openai' };
+      }
+    } catch (error) {
+      console.error('OpenAI API error:', error.message);
+      return { success: false, error: error.message };
+    }
+  }
+
+  parseContentFallback(content, topic) {
+    return {
+      facebook: content.substring(0, 300),
+      linkedin: content.substring(0, 400),
+      instagram: content.substring(0, 200) + '\n\n#realmute #silentpractice #musictech',
+      twitter: content.substring(0, 200) + ' #realmute',
+      topic: topic
+    };
+  }
+}
+
+// 🌟 Google Gemini Integration
+class GeminiAI {
+  constructor(apiKey) {
+    this.apiKey = apiKey;
+    this.baseURL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
+  }
+
+  async generateContent(topic) {
+    const prompt = `Create social media marketing content for Real Mute Technologies about: ${topic}
+
+Real Mute is a practice mute with 50dB noise reduction and perfect intonation.
+
+Generate content for:
+- Facebook: Casual, community-focused (100-200 words)
+- LinkedIn: Professional, educational (150-250 words)
+- Instagram: Visual, hashtag-rich (80-150 words)
+- Twitter: Concise, engaging (under 280 chars)
+
+Return as JSON format:
+{
+  "facebook": "content",
+  "linkedin": "content", 
+  "instagram": "content",
+  "twitter": "content",
+  "topic": "${topic}"
+}`;
+
+    try {
+      const response = await axios.post(`${this.baseURL}?key=${this.apiKey}`, {
+        contents: [{
+          parts: [{ text: prompt }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1500
+        }
+      }, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000
+      });
+
+      const content = response.data.candidates[0].content.parts[0].text;
+      
+      try {
+        return { success: true, data: JSON.parse(content), provider: 'gemini' };
+      } catch {
+        return { success: true, data: this.parseContentFallback(content, topic), provider: 'gemini' };
+      }
+    } catch (error) {
+      console.error('Gemini API error:', error.message);
+      return { success: false, error: error.message };
+    }
+  }
+
+  parseContentFallback(content, topic) {
+    return {
+      facebook: content.substring(0, 300),
+      linkedin: content.substring(0, 400),
+      instagram: content.substring(0, 200) + '\n\n#realmute #silentpractice #musictech',
+      twitter: content.substring(0, 200) + ' #realmute',
+      topic: topic
+    };
+  }
+}
+
+// 🎯 AI Content Generator with fallback strategy
+class AIContentGenerator {
+  constructor() {
+    this.providers = [];
+    
+    // Initialize available providers
+    if (process.env.CLAUDE_API_KEY) {
+      this.providers.push(new ClaudeAI(process.env.CLAUDE_API_KEY));
+    }
+    
+    if (process.env.OPENAI_API_KEY) {
+      this.providers.push(new OpenAI(process.env.OPENAI_API_KEY));
+    }
+    
+    if (process.env.GEMINI_API_KEY) {
+      this.providers.push(new GeminiAI(process.env.GEMINI_API_KEY));
+    }
+    
+    console.log(`Initialized ${this.providers.length} AI providers`);
+  }
+
+  async generateContent(topic) {
+    console.log(`Generating content for topic: ${topic}`);
+    
+    // Try each AI provider in order
+    for (let i = 0; i < this.providers.length; i++) {
+      const provider = this.providers[i];
+      console.log(`Trying provider ${i + 1}/${this.providers.length}: ${provider.constructor.name}`);
+      
+      try {
+        const result = await provider.generateContent(topic);
+        
+        if (result.success) {
+          console.log(`Success with provider: ${result.provider}`);
+          STORAGE.analytics.aiProviders[result.provider].used++;
+          return result;
+        }
+      } catch (error) {
+        console.error(`Provider ${provider.constructor.name} failed:`, error.message);
+        const providerName = provider.constructor.name.toLowerCase().includes('claude') ? 'claude' :
+                           provider.constructor.name.toLowerCase().includes('openai') ? 'openai' : 'gemini';
+        STORAGE.analytics.aiProviders[providerName].errors++;
+      }
+    }
+    
+    // All AI providers failed, use fallback
+    console.log('All AI providers failed, using fallback template');
+    STORAGE.analytics.aiProviders.fallback.used++;
+    
+    const template = FALLBACK_TEMPLATES[Math.floor(Math.random() * FALLBACK_TEMPLATES.length)];
+    return {
+      success: true,
+      data: {
+        facebook: template.facebook,
+        linkedin: template.linkedin,
+        instagram: template.instagram,
+        twitter: template.twitter,
+        topic: template.topic
+      },
+      provider: 'fallback'
+    };
+  }
+}
+
+// 📊 Enhanced Dashboard HTML
 const getDashboardHTML = () => {
   const stats = {
     total: STORAGE.contentQueue.length,
     posted: STORAGE.posts.length,
-    pending: STORAGE.contentQueue.length - STORAGE.posts.length
+    pending: STORAGE.contentQueue.filter(item => !item.posted).length
   };
+
+  const aiStats = STORAGE.analytics.aiProviders;
 
   return `
 <!DOCTYPE html>
@@ -152,7 +335,7 @@ const getDashboardHTML = () => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🚀 AI Marketing Monster - Dashboard</title>
+    <title>🚀 AI Marketing Monster - Multi-AI System</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -162,7 +345,7 @@ const getDashboardHTML = () => {
             min-height: 100vh;
             padding: 20px;
         }
-        .container { max-width: 1200px; margin: 0 auto; }
+        .container { max-width: 1400px; margin: 0 auto; }
         .header { 
             background: rgba(255,255,255,0.1);
             backdrop-filter: blur(10px);
@@ -173,6 +356,22 @@ const getDashboardHTML = () => {
             color: white;
         }
         .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .ai-banner {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
+            background-size: 300% 300%;
+            animation: gradientShift 3s ease infinite;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
         .card { 
             background: white;
@@ -199,40 +398,68 @@ const getDashboardHTML = () => {
         }
         .btn:hover { background: #5a6fd8; transform: translateY(-2px); }
         .btn.success { background: #28a745; }
-        .status { 
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 15px;
-            font-size: 0.8em;
-            font-weight: bold;
-            background: #d4edda;
-            color: #155724;
-        }
-        .log-entry {
-            background: #f8f9fa;
-            padding: 8px 12px;
-            border-radius: 6px;
+        .btn.danger { background: #dc3545; }
+        .btn.ai { background: linear-gradient(45deg, #ff6b6b, #4ecdc4); }
+        .ai-provider {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
             margin: 5px 0;
-            font-family: monospace;
-            font-size: 0.8em;
-            border-left: 3px solid #17a2b8;
-        }
-        .content-item {
             background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+        }
+        .ai-provider.error { border-left-color: #dc3545; }
+        .ai-provider.not-configured { border-left-color: #6c757d; opacity: 0.6; }
+        .content-item {
+            background: #e8f5e8;
             padding: 15px;
             border-radius: 8px;
             margin: 10px 0;
             border-left: 4px solid #28a745;
+            position: relative;
         }
+        .provider-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7em;
+            font-weight: bold;
+        }
+        .provider-badge.claude { background: #ff6b6b; }
+        .provider-badge.openai { background: #4ecdc4; }
+        .provider-badge.gemini { background: #45b7d1; }
+        .provider-badge.fallback { background: #6c757d; }
         .copy-btn {
             background: #17a2b8;
             color: white;
             border: none;
-            padding: 4px 8px;
+            padding: 6px 12px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 0.7em;
+            font-size: 0.8em;
             margin: 2px;
+        }
+        .copy-btn:hover { background: #138496; }
+        .content-text {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 8px 0;
+            font-size: 0.9em;
+            max-height: 100px;
+            overflow: hidden;
+        }
+        .platform-label {
+            font-weight: bold;
+            color: #667eea;
+            display: block;
+            margin: 10px 0 5px 0;
         }
     </style>
 </head>
@@ -240,8 +467,14 @@ const getDashboardHTML = () => {
     <div class="container">
         <div class="header">
             <h1>🚀 AI Marketing Monster</h1>
-            <p>Real Mute Technologies - Netlify Edition</p>
-            <div class="status">ONLINE</div>
+            <p>Multi-AI Content Generation System</p>
+            <div style="background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px; display: inline-block; margin-top: 10px;">
+                MULTI-AI POWERED
+            </div>
+        </div>
+
+        <div class="ai-banner">
+            🤖 Powered by Claude AI + ChatGPT + Gemini + Smart Fallbacks = Unstoppable Content!
         </div>
 
         <div class="grid">
@@ -258,7 +491,7 @@ const getDashboardHTML = () => {
                     </div>
                     <div class="stat">
                         <div class="stat-number">${stats.pending}</div>
-                        <div class="stat-label">Pending</div>
+                        <div class="stat-label">Ready to Post</div>
                     </div>
                     <div class="stat">
                         <div class="stat-number">${STORAGE.analytics.totalPosts}</div>
@@ -266,48 +499,91 @@ const getDashboardHTML = () => {
                     </div>
                 </div>
                 <div>
-                    <button class="btn success" onclick="generateContent()">🎨 Generate Content</button>
-                    <button class="btn" onclick="postNow()">📘 Post to Facebook</button>
+                    <button class="btn ai" onclick="generateContent()">🤖 Generate AI Content</button>
+                    <button class="btn success" onclick="postNow()">📘 Post to Facebook</button>
+                    <button class="btn danger" onclick="clearAll()">🗑️ Clear All</button>
                     <button class="btn" onclick="location.reload()">🔄 Refresh</button>
                 </div>
             </div>
 
             <div class="card">
-                <h3>🔧 System Configuration</h3>
-                <div class="log-entry">Claude API: ${CONFIG.CLAUDE_API_KEY ? '✅ Connected' : '❌ Not configured'}</div>
-                <div class="log-entry">Facebook API: ${CONFIG.FACEBOOK_ACCESS_TOKEN ? '✅ Connected' : '❌ Not configured'}</div>
-                <div class="log-entry">Page ID: ${CONFIG.FACEBOOK_PAGE_ID || 'Not set'}</div>
-                <div class="log-entry">Platform: Netlify Functions</div>
-                <div class="log-entry">Status: Serverless Ready</div>
+                <h3>🤖 AI Providers Status</h3>
+                <div class="ai-provider ${process.env.CLAUDE_API_KEY ? '' : 'not-configured'}">
+                    <div>
+                        <strong>🔥 Claude AI</strong><br>
+                        <small>${process.env.CLAUDE_API_KEY ? 'Configured' : 'Not configured'}</small>
+                    </div>
+                    <div>Used: ${aiStats.claude.used} | Errors: ${aiStats.claude.errors}</div>
+                </div>
+                
+                <div class="ai-provider ${process.env.OPENAI_API_KEY ? '' : 'not-configured'}">
+                    <div>
+                        <strong>🧠 ChatGPT (OpenAI)</strong><br>
+                        <small>${process.env.OPENAI_API_KEY ? 'Configured' : 'Not configured'}</small>
+                    </div>
+                    <div>Used: ${aiStats.openai.used} | Errors: ${aiStats.openai.errors}</div>
+                </div>
+                
+                <div class="ai-provider ${process.env.GEMINI_API_KEY ? '' : 'not-configured'}">
+                    <div>
+                        <strong>⭐ Google Gemini</strong><br>
+                        <small>${process.env.GEMINI_API_KEY ? 'Configured' : 'Not configured'}</small>
+                    </div>
+                    <div>Used: ${aiStats.gemini.used} | Errors: ${aiStats.gemini.errors}</div>
+                </div>
+                
+                <div class="ai-provider">
+                    <div>
+                        <strong>🛡️ Smart Fallback</strong><br>
+                        <small>Always available</small>
+                    </div>
+                    <div>Used: ${aiStats.fallback.used}</div>
+                </div>
             </div>
 
             <div class="card">
-                <h3>📝 Recent Content</h3>
-                ${STORAGE.contentQueue.slice(-3).map(item => `
-                    <div class="content-item">
-                        <strong>${item.topic || 'Generated Content'}</strong>
-                        <div style="margin-top: 8px;">
-                            <button class="copy-btn" onclick="copyContent('${item.id}', 'facebook')">📘 FB</button>
-                            <button class="copy-btn" onclick="copyContent('${item.id}', 'linkedin')">💼 LI</button>
-                            <button class="copy-btn" onclick="copyContent('${item.id}', 'instagram')">📸 IG</button>
-                            <button class="copy-btn" onclick="copyContent('${item.id}', 'twitter')">🐦 TW</button>
+                <h3>📝 Recent AI-Generated Content</h3>
+                <div style="max-height: 500px; overflow-y: auto;">
+                    ${STORAGE.contentQueue.slice(-3).reverse().map(item => `
+                        <div class="content-item">
+                            <div class="provider-badge ${item.provider || 'unknown'}">${(item.provider || 'unknown').toUpperCase()}</div>
+                            <strong>${item.topic}</strong>
+                            <div>
+                                <span class="platform-label">📘 Facebook:</span>
+                                <div class="content-text">${item.content.facebook}</div>
+                                <button class="copy-btn" onclick="copyText('${item.content.facebook.replace(/'/g, "\\'")}')">Copy FB</button>
+                                
+                                <span class="platform-label">💼 LinkedIn:</span>
+                                <div class="content-text">${item.content.linkedin}</div>
+                                <button class="copy-btn" onclick="copyText('${item.content.linkedin.replace(/'/g, "\\'")}')">Copy LI</button>
+                                
+                                <span class="platform-label">📸 Instagram:</span>
+                                <div class="content-text">${item.content.instagram}</div>
+                                <button class="copy-btn" onclick="copyText('${item.content.instagram.replace(/'/g, "\\'")}')">Copy IG</button>
+                                
+                                <span class="platform-label">🐦 Twitter:</span>
+                                <div class="content-text">${item.content.twitter}</div>
+                                <button class="copy-btn" onclick="copyText('${item.content.twitter.replace(/'/g, "\\'")}')">Copy TW</button>
+                            </div>
                         </div>
-                    </div>
-                `).join('') || '<p>No content generated yet. Click "Generate Content" to start!</p>'}
+                    `).join('') || '<p>No content yet. Click "Generate AI Content" to start!</p>'}
+                </div>
             </div>
 
             <div class="card">
-                <h3>📘 Recent Posts</h3>
-                ${STORAGE.posts.slice(-3).map(post => `
-                    <div class="content-item">
-                        <div style="font-size: 0.8em; color: #666; margin-bottom: 5px;">
-                            ${new Date(post.postedAt).toLocaleString()}
+                <h3>📘 Facebook Posts</h3>
+                <div style="max-height: 300px; overflow-y: auto;">
+                    ${STORAGE.posts.slice(-3).reverse().map(post => `
+                        <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #2196f3;">
+                            <div style="font-size: 0.8em; color: #666; margin-bottom: 5px;">
+                                Posted: ${new Date(post.postedAt).toLocaleString()}
+                            </div>
+                            <div style="font-weight: bold; margin-bottom: 5px;">${post.topic}</div>
+                            <div style="font-size: 0.9em;">${post.content.substring(0, 150)}...</div>
+                            ${post.postId ? `<div style="font-size: 0.8em; color: #666; margin-top: 5px;">Post ID: ${post.postId}</div>` : ''}
                         </div>
-                        <div style="font-size: 0.9em;">
-                            ${post.content.substring(0, 100)}...
-                        </div>
-                    </div>
-                `).join('') || '<p>No posts yet. Generate content and post to Facebook!</p>'}
+                    `).join('') || '<p>No posts yet. Generate content and post to Facebook!</p>'}
+                </div>
             </div>
         </div>
     </div>
@@ -316,7 +592,7 @@ const getDashboardHTML = () => {
         async function generateContent() {
             const btn = event.target;
             btn.disabled = true;
-            btn.textContent = '🎨 Generating...';
+            btn.textContent = '🤖 Generating with AI...';
             
             try {
                 const response = await fetch('/.netlify/functions/api', {
@@ -328,7 +604,7 @@ const getDashboardHTML = () => {
                 const result = await response.json();
                 
                 if (result.success) {
-                    alert('✅ Content generated successfully!');
+                    alert(\`✅ Content generated with \${result.provider.toUpperCase()}!\`);
                     location.reload();
                 } else {
                     alert('❌ Error: ' + result.error);
@@ -338,7 +614,7 @@ const getDashboardHTML = () => {
             }
             
             btn.disabled = false;
-            btn.textContent = '🎨 Generate Content';
+            btn.textContent = '🤖 Generate AI Content';
         }
 
         async function postNow() {
@@ -369,28 +645,37 @@ const getDashboardHTML = () => {
             btn.textContent = '📘 Post to Facebook';
         }
 
-        async function copyContent(contentId, platform) {
-            try {
-                const response = await fetch('/.netlify/functions/api', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'getContent', contentId, platform })
-                });
-                
-                const result = await response.json();
-                
-                if (result.success && result.content) {
-                    await navigator.clipboard.writeText(result.content);
+        async function clearAll() {
+            if (confirm('Clear all content and posts?')) {
+                try {
+                    await fetch('/.netlify/functions/api', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'clear' })
+                    });
                     
-                    const btn = event.target;
-                    const originalText = btn.textContent;
-                    btn.textContent = '✅ Copied!';
-                    setTimeout(() => btn.textContent = originalText, 2000);
-                } else {
-                    alert('Content not found');
+                    alert('✅ All data cleared!');
+                    location.reload();
+                } catch (error) {
+                    alert('❌ Error: ' + error.message);
                 }
+            }
+        }
+
+        async function copyText(text) {
+            try {
+                await navigator.clipboard.writeText(text);
+                
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Copied!';
+                btn.style.background = '#28a745';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '#17a2b8';
+                }, 2000);
             } catch (error) {
-                alert('Failed to copy: ' + error.message);
+                alert('Failed to copy text');
             }
         }
     </script>
@@ -401,14 +686,12 @@ const getDashboardHTML = () => {
 
 // 🚀 Main handler function
 exports.handler = async (event, context) => {
-  // CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
   };
 
-  // Handle OPTIONS request
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
   }
@@ -425,68 +708,58 @@ exports.handler = async (event, context) => {
 
     // POST request - API actions
     if (event.httpMethod === 'POST') {
-      const { action, contentId, platform } = JSON.parse(event.body || '{}');
+      const { action } = JSON.parse(event.body || '{}');
 
       switch (action) {
         case 'generate':
-          console.log('Generate action called');
+          console.log('Starting AI content generation...');
           
-          if (!CONFIG.CLAUDE_API_KEY) {
-            console.error('Claude API key missing');
-            return {
-              statusCode: 400,
-              headers,
-              body: JSON.stringify({ success: false, error: 'Claude API key not configured' })
-            };
-          }
-
-          console.log('Claude API key found, generating content...');
-          const claude = new ClaudeAI(CONFIG.CLAUDE_API_KEY);
-          const topic = contentTopics[Math.floor(Math.random() * contentTopics.length)];
+          const generator = new AIContentGenerator();
+          const topic = CONTENT_TOPICS[Math.floor(Math.random() * CONTENT_TOPICS.length)];
           
-          console.log('Selected topic:', topic);
+          const result = await generator.generateContent(topic);
           
-          try {
-            const content = await claude.generateMultiPlatformContent(topic);
-            console.log('Content generated successfully');
-            
+          if (result.success) {
             const contentItem = {
               id: Date.now().toString(),
-              topic: topic,
-              content: content,
-              generatedAt: new Date().toISOString()
+              topic: result.data.topic || topic,
+              content: {
+                facebook: result.data.facebook,
+                linkedin: result.data.linkedin,
+                instagram: result.data.instagram,
+                twitter: result.data.twitter
+              },
+              generatedAt: new Date().toISOString(),
+              posted: false,
+              provider: result.provider
             };
 
             STORAGE.contentQueue.push(contentItem);
-            console.log('Content added to queue');
+            console.log(`Content generated successfully with ${result.provider}`);
 
             return {
               statusCode: 200,
               headers,
-              body: JSON.stringify({ success: true, content: contentItem })
+              body: JSON.stringify({ 
+                success: true, 
+                content: contentItem, 
+                provider: result.provider 
+              })
             };
-          } catch (claudeError) {
-            console.error('Claude API Error:', claudeError.message);
+          } else {
             return {
               statusCode: 500,
               headers,
               body: JSON.stringify({ 
                 success: false, 
-                error: 'Failed to generate content: ' + claudeError.message 
+                error: 'All AI providers failed to generate content' 
               })
             };
           }
 
         case 'post':
-          if (!CONFIG.FACEBOOK_ACCESS_TOKEN || !CONFIG.FACEBOOK_PAGE_ID) {
-            return {
-              statusCode: 400,
-              headers,
-              body: JSON.stringify({ success: false, error: 'Facebook credentials not configured' })
-            };
-          }
-
           const readyContent = STORAGE.contentQueue.find(item => !item.posted);
+          
           if (!readyContent) {
             return {
               statusCode: 400,
@@ -495,43 +768,97 @@ exports.handler = async (event, context) => {
             };
           }
 
-          const facebook = new FacebookAPI(CONFIG.FACEBOOK_ACCESS_TOKEN, CONFIG.FACEBOOK_PAGE_ID);
-          const result = await facebook.postToPage(
-            readyContent.content.facebook,
-            CONFIG.BRAND.landingPage
-          );
-
-          readyContent.posted = true;
-          STORAGE.posts.push({
-            id: readyContent.id,
-            content: readyContent.content.facebook,
-            postId: result.id,
-            postedAt: new Date().toISOString(),
-            topic: readyContent.topic
-          });
-
-          STORAGE.analytics.totalPosts += 1;
-
-          return {
-            statusCode: 200,
-            headers,
-            body: JSON.stringify({ success: true, postId: result.id })
-          };
-
-        case 'getContent':
-          const item = STORAGE.contentQueue.find(c => c.id === contentId);
-          if (!item || !item.content[platform]) {
+          // Check if Facebook is configured
+          if (!process.env.FACEBOOK_ACCESS_TOKEN || !process.env.FACEBOOK_PAGE_ID) {
             return {
-              statusCode: 404,
+              statusCode: 400,
               headers,
-              body: JSON.stringify({ success: false, error: 'Content not found' })
+              body: JSON.stringify({ success: false, error: 'Facebook credentials not configured' })
             };
           }
 
+          try {
+            // Post to Facebook
+            const postData = {
+              message: readyContent.content.facebook,
+              link: 'https://real-mute-lp.netlify.app',
+              access_token: process.env.FACEBOOK_ACCESS_TOKEN
+            };
+
+            const fbResponse = await axios.post(
+              `https://graph.facebook.com/v18.0/${process.env.FACEBOOK_PAGE_ID}/feed`,
+              postData,
+              { timeout: 30000 }
+            );
+
+            // Mark as posted
+            readyContent.posted = true;
+            
+            // Add to posts
+            STORAGE.posts.push({
+              id: readyContent.id,
+              content: readyContent.content.facebook,
+              postId: fbResponse.data.id,
+              postedAt: new Date().toISOString(),
+              topic: readyContent.topic,
+              provider: readyContent.provider
+            });
+
+            STORAGE.analytics.totalPosts += 1;
+            console.log(`Posted to Facebook successfully: ${fbResponse.data.id}`);
+
+            return {
+              statusCode: 200,
+              headers,
+              body: JSON.stringify({ 
+                success: true, 
+                postId: fbResponse.data.id,
+                provider: readyContent.provider 
+              })
+            };
+
+          } catch (fbError) {
+            console.error('Facebook posting error:', fbError.message);
+            return {
+              statusCode: 500,
+              headers,
+              body: JSON.stringify({ 
+                success: false, 
+                error: 'Facebook posting failed: ' + fbError.message 
+              })
+            };
+          }
+
+        case 'clear':
+          STORAGE.posts = [];
+          STORAGE.contentQueue = [];
+          STORAGE.analytics.totalPosts = 0;
+          STORAGE.analytics.aiProviders = {
+            claude: { used: 0, errors: 0 },
+            openai: { used: 0, errors: 0 },
+            gemini: { used: 0, errors: 0 },
+            fallback: { used: 0, errors: 0 }
+          };
+
           return {
             statusCode: 200,
             headers,
-            body: JSON.stringify({ success: true, content: item.content[platform] })
+            body: JSON.stringify({ success: true })
+          };
+
+        case 'stats':
+          return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({
+              success: true,
+              stats: {
+                total: STORAGE.contentQueue.length,
+                posted: STORAGE.posts.length,
+                pending: STORAGE.contentQueue.filter(item => !item.posted).length,
+                aiProviders: STORAGE.analytics.aiProviders
+              }
+            })
           };
 
         default:
