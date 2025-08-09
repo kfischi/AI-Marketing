@@ -1,17 +1,25 @@
-export default async function handler(req, res) {
-  // Set CORS headers
+export default function handler(req, res) {
+  // Set headers first
+  res.setHeader('Content-Type', 'application/json');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Content-Type', 'application/json');
 
+  // Handle preflight
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    return res.status(200).end();
+  }
+
+  // Only allow GET requests
+  if (req.method !== 'GET') {
+    return res.status(405).json({ 
+      success: false, 
+      error: 'Method not allowed' 
+    });
   }
 
   try {
-    const systemInfo = {
+    const response = {
       success: true,
       message: "Real Mute AI Marketing System is operational!",
       timestamp: new Date().toISOString(),
@@ -34,9 +42,10 @@ export default async function handler(req, res) {
       }
     };
 
-    res.status(200).json(systemInfo);
+    return res.status(200).json(response);
+
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: error.message,
       timestamp: new Date().toISOString()
