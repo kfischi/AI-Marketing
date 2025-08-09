@@ -1,43 +1,361 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Real Mute Dashboard</title>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Mute AI Marketing Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: rgba(255,255,255,0.2);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #FFD700;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .btn.success { background: linear-gradient(45deg, #27ae60, #229954); }
+        .btn.warning { background: linear-gradient(45deg, #f39c12, #e67e22); }
+        .btn.danger { background: linear-gradient(45deg, #e74c3c, #c0392b); }
+        
+        .result {
+            background: rgba(255,255,255,0.15);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            min-height: 100px;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid #FFD700;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .content-feed {
+            max-height: 300px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .content-item {
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #FFD700;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-online { background: #27ae60; }
+        .status-offline { background: #e74c3c; }
+        .status-warning { background: #f39c12; }
+        
+        @media (max-width: 768px) {
+            .controls {
+                grid-template-columns: 1fr;
+            }
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>Real Mute AI Marketing Dashboard</h1>
-    
-    <button id="testBtn" onclick="testFacebook()">🧪 Test Facebook</button>
-    <button id="generateBtn" onclick="generateContent()">🚀 Generate Content</button>
-    
-    <div id="result" style="margin-top: 20px; padding: 10px; background: #f0f0f0;"></div>
+    <div class="container">
+        <div class="header">
+            <h1>🎺 Real Mute AI Marketing</h1>
+            <p>Automated Content Generation & Social Media Publishing</p>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="postsToday">0</div>
+                <div>Posts Today</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalPosts">0</div>
+                <div>Total Posts</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="platformsActive">0</div>
+                <div>Active Platforms</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">
+                    <span class="status-indicator" id="systemStatus"></span>
+                    <span id="statusText">Loading...</span>
+                </div>
+                <div>System Status</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn success" onclick="testSystem()">🧪 Test System</button>
+            <button class="btn" onclick="generateContent()">🤖 Generate Content</button>
+            <button class="btn warning" onclick="testFacebook()">📘 Test Facebook</button>
+            <button class="btn" onclick="schedulePost()">⏰ Schedule Posts</button>
+            <button class="btn" onclick="viewAnalytics()">📊 Analytics</button>
+            <button class="btn danger" onclick="clearData()">🗑️ Clear Data</button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing...</p>
+        </div>
+
+        <div class="result" id="result">
+            <h3>📊 System Dashboard</h3>
+            <p>Click any button above to test the system functionality.</p>
+        </div>
+
+        <div class="result">
+            <h3>📝 Recent Content</h3>
+            <div class="content-feed" id="contentFeed">
+                <p>No content generated yet. Click "Generate Content" to start!</p>
+            </div>
+        </div>
+    </div>
 
     <script>
-        async function testFacebook() {
-            document.getElementById('result').innerHTML = 'Testing Facebook...';
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+        
+        function updateResult(content, type = 'info') {
+            const result = document.getElementById('result');
+            const timestamp = new Date().toLocaleTimeString();
+            result.innerHTML = `
+                <h3>📊 ${type.toUpperCase()} - ${timestamp}</h3>
+                <pre style="white-space: pre-wrap; word-wrap: break-word;">${content}</pre>
+            `;
+        }
+
+        async function testSystem() {
+            showLoading();
             try {
-                const response = await fetch('/.netlify/functions/api/test-facebook', {
-                    method: 'POST'
-                });
+                const response = await fetch('/api/test');
                 const data = await response.json();
-                document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                updateResult(JSON.stringify(data, null, 2), 'success');
+                
+                if (data.success) {
+                    document.getElementById('systemStatus').className = 'status-indicator status-online';
+                    document.getElementById('statusText').textContent = 'Online';
+                }
             } catch (error) {
-                document.getElementById('result').innerHTML = 'Error: ' + error.message;
+                updateResult(`Error: ${error.message}`, 'error');
+                document.getElementById('systemStatus').className = 'status-indicator status-offline';
+                document.getElementById('statusText').textContent = 'Offline';
             }
+            hideLoading();
         }
 
         async function generateContent() {
-            document.getElementById('result').innerHTML = 'Generating content...';
+            showLoading();
             try {
-                const response = await fetch('/.netlify/functions/api/generate', {
-                    method: 'POST'
-                });
+                const response = await fetch('/api/generate', { method: 'POST' });
                 const data = await response.json();
-                document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                updateResult(JSON.stringify(data, null, 2), 'success');
+                
+                if (data.success) {
+                    updateContentFeed(data.content);
+                    updateStats();
+                }
             } catch (error) {
-                document.getElementById('result').innerHTML = 'Error: ' + error.message;
+                updateResult(`Error: ${error.message}`, 'error');
+            }
+            hideLoading();
+        }
+
+        async function testFacebook() {
+            showLoading();
+            try {
+                const response = await fetch('/api/facebook-test', { method: 'POST' });
+                const data = await response.json();
+                updateResult(JSON.stringify(data, null, 2), data.success ? 'success' : 'error');
+            } catch (error) {
+                updateResult(`Error: ${error.message}`, 'error');
+            }
+            hideLoading();
+        }
+
+        async function schedulePost() {
+            showLoading();
+            try {
+                const response = await fetch('/api/schedule', { method: 'POST' });
+                const data = await response.json();
+                updateResult(JSON.stringify(data, null, 2), 'success');
+            } catch (error) {
+                updateResult(`Error: ${error.message}`, 'error');
+            }
+            hideLoading();
+        }
+
+        async function viewAnalytics() {
+            showLoading();
+            try {
+                const response = await fetch('/api/analytics');
+                const data = await response.json();
+                updateResult(JSON.stringify(data, null, 2), 'info');
+            } catch (error) {
+                updateResult(`Error: ${error.message}`, 'error');
+            }
+            hideLoading();
+        }
+
+        async function clearData() {
+            if (confirm('Are you sure you want to clear all data?')) {
+                showLoading();
+                try {
+                    const response = await fetch('/api/clear', { method: 'POST' });
+                    const data = await response.json();
+                    updateResult(JSON.stringify(data, null, 2), 'success');
+                    updateStats();
+                } catch (error) {
+                    updateResult(`Error: ${error.message}`, 'error');
+                }
+                hideLoading();
             }
         }
+
+        function updateContentFeed(content) {
+            const feed = document.getElementById('contentFeed');
+            if (content) {
+                const item = document.createElement('div');
+                item.className = 'content-item';
+                item.innerHTML = `
+                    <strong>Generated:</strong> ${new Date().toLocaleTimeString()}<br>
+                    <strong>Content:</strong> ${content.text || content}<br>
+                    <strong>Platforms:</strong> ${content.platforms ? content.platforms.join(', ') : 'N/A'}
+                `;
+                feed.insertBefore(item, feed.firstChild);
+            }
+        }
+
+        async function updateStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('postsToday').textContent = data.postsToday || 0;
+                    document.getElementById('totalPosts').textContent = data.totalPosts || 0;
+                    document.getElementById('platformsActive').textContent = data.platformsActive || 0;
+                }
+            } catch (error) {
+                console.error('Failed to update stats:', error);
+            }
+        }
+
+        // Auto-update stats every 30 seconds
+        setInterval(updateStats, 30000);
+        
+        // Initial load
+        window.addEventListener('load', () => {
+            updateStats();
+            testSystem();
+        });
     </script>
 </body>
 </html>
