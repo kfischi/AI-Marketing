@@ -83,8 +83,10 @@ Return as JSON:
 Generate authentic, valuable content that musicians will engage with.`;
 
     try {
+      console.log('Claude API: Starting request...');
+      
       const response = await axios.post(this.baseURL, {
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-3-haiku-20240307',
         max_tokens: 1500,
         messages: [{ role: 'user', content: prompt }]
       }, {
@@ -96,16 +98,25 @@ Generate authentic, valuable content that musicians will engage with.`;
         timeout: 30000
       });
 
+      console.log('Claude API: Response received');
       const content = response.data.content[0].text;
       
       try {
-        return { success: true, data: JSON.parse(content), provider: 'claude' };
-      } catch {
+        const parsed = JSON.parse(content);
+        console.log('Claude API: JSON parsed successfully');
+        return { success: true, data: parsed, provider: 'claude' };
+      } catch (parseError) {
+        console.log('Claude API: JSON parse failed, using fallback parser');
         return { success: true, data: this.parseContentFallback(content, topic), provider: 'claude' };
       }
     } catch (error) {
-      console.error('Claude API error:', error.message);
-      return { success: false, error: error.message };
+      console.error('Claude API Error Details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
+      return { success: false, error: `Claude API failed: ${error.message}` };
     }
   }
 
@@ -712,47 +723,62 @@ exports.handler = async (event, context) => {
 
       switch (action) {
         case 'generate':
-          console.log('Starting AI content generation...');
+          console.log('=== GENERATE ACTION STARTED ===');
           
-          const generator = new AIContentGenerator();
-          const topic = CONTENT_TOPICS[Math.floor(Math.random() * CONTENT_TOPICS.length)];
-          
-          const result = await generator.generateContent(topic);
-          
-          if (result.success) {
-            const contentItem = {
-              id: Date.now().toString(),
-              topic: result.data.topic || topic,
-              content: {
-                facebook: result.data.facebook,
-                linkedin: result.data.linkedin,
-                instagram: result.data.instagram,
-                twitter: result.data.twitter
-              },
-              generatedAt: new Date().toISOString(),
-              posted: false,
-              provider: result.provider
-            };
+          try {
+            const generator = new AIContentGenerator();
+            const topic = CONTENT_TOPICS[Math.floor(Math.random() * CONTENT_TOPICS.length)];
+            
+            console.log(`Selected topic: ${topic}`);
+            const result = await generator.generateContent(topic);
+            
+            if (result.success) {
+              const contentItem = {
+                id: Date.now().toString(),
+                topic: result.data.topic || topic,
+                content: {
+                  facebook: result.data.facebook,
+                  linkedin: result.data.linkedin,
+                  instagram: result.data.instagram,
+                  twitter: result.data.twitter
+                },
+                generatedAt: new Date().toISOString(),
+                posted: false,
+                provider: result.provider
+              };
 
-            STORAGE.contentQueue.push(contentItem);
-            console.log(`Content generated successfully with ${result.provider}`);
+              STORAGE.contentQueue.push(contentItem);
+              console.log(`Content generated successfully with ${result.provider}`);
 
-            return {
-              statusCode: 200,
-              headers,
-              body: JSON.stringify({ 
-                success: true, 
-                content: contentItem, 
-                provider: result.provider 
-              })
-            };
-          } else {
+              return {
+                statusCode: 200,
+                headers,
+                body: JSON.stringify({ 
+                  success: true, 
+                  content: contentItem, 
+                  provider: result.provider 
+                })
+              };
+            } else {
+              console.error('All AI providers failed');
+              return {
+                statusCode: 500,
+                headers,
+                body: JSON.stringify({ 
+                  success: false, 
+                  error: 'All AI providers failed to generate content',
+                  details: result.error 
+                })
+              };
+            }
+          } catch (generateError) {
+            console.error('Generate case error:', generateError);
             return {
               statusCode: 500,
               headers,
               body: JSON.stringify({ 
                 success: false, 
-                error: 'All AI providers failed to generate content' 
+                error: 'Generation failed: ' + generateError.message 
               })
             };
           }
