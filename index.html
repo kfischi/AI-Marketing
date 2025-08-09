@@ -1,114 +1,43 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
     <title>Real Mute Dashboard</title>
-    <style>
-        body { 
-            font-family: Arial; 
-            margin: 40px; 
-            background: #f5f5f5; 
-        }
-        .container { 
-            max-width: 800px; 
-            margin: 0 auto; 
-            background: white; 
-            padding: 30px; 
-            border-radius: 10px; 
-        }
-        .btn { 
-            background: #007bff; 
-            color: white; 
-            border: none; 
-            padding: 12px 20px; 
-            margin: 10px 5px; 
-            border-radius: 5px; 
-            cursor: pointer; 
-        }
-        .btn:hover { background: #0056b3; }
-        .result { 
-            background: #f8f9fa; 
-            padding: 15px; 
-            margin: 15px 0; 
-            border-radius: 5px; 
-            border-left: 4px solid #007bff; 
-        }
-        .error { border-left-color: #dc3545; }
-        .success { border-left-color: #28a745; }
-    </style>
+    <meta charset="UTF-8">
 </head>
 <body>
-    <div class="container">
-        <h1>🎺 Real Mute AI Marketing Dashboard</h1>
-        <p>Simple dashboard to test and generate content</p>
-        
-        <h3>Quick Actions:</h3>
-        <button class="btn" onclick="testAPI()">📊 Test API</button>
-        <button class="btn" onclick="testFacebook()">📘 Test Facebook</button>
-        <button class="btn" onclick="generateContent()">🚀 Generate Content</button>
-        
-        <div id="result"></div>
-    </div>
+    <h1>Real Mute AI Marketing Dashboard</h1>
+    
+    <button id="testBtn" onclick="testFacebook()">🧪 Test Facebook</button>
+    <button id="generateBtn" onclick="generateContent()">🚀 Generate Content</button>
+    
+    <div id="result" style="margin-top: 20px; padding: 10px; background: #f0f0f0;"></div>
 
     <script>
-        function showResult(message, type = 'result') {
-            document.getElementById('result').innerHTML = 
-                `<div class="result ${type}"><strong>${new Date().toLocaleTimeString()}:</strong> ${message}</div>`;
-        }
-
-        async function testAPI() {
-            showResult('Testing API connection...', 'result');
-            try {
-                const response = await fetch('/.netlify/functions/api');
-                const data = await response.json();
-                showResult(`✅ API works! Stats: Generated: ${data.stats.totalGenerated}, Posted: ${data.stats.totalPosted}`, 'success');
-            } catch (error) {
-                showResult(`❌ API Error: ${error.message}`, 'error');
-            }
-        }
-
         async function testFacebook() {
-            showResult('Testing Facebook posting...', 'result');
+            document.getElementById('result').innerHTML = 'Testing Facebook...';
             try {
                 const response = await fetch('/.netlify/functions/api/test-facebook', {
                     method: 'POST'
                 });
                 const data = await response.json();
-                
-                if (data.result && data.result.success) {
-                    showResult(`✅ Facebook Success! Post ID: ${data.result.postId}`, 'success');
-                } else {
-                    showResult(`❌ Facebook Failed: ${data.result ? data.result.error : 'Unknown error'}`, 'error');
-                }
+                document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
             } catch (error) {
-                showResult(`❌ Facebook Error: ${error.message}`, 'error');
+                document.getElementById('result').innerHTML = 'Error: ' + error.message;
             }
         }
 
         async function generateContent() {
-            showResult('Generating and posting content...', 'result');
+            document.getElementById('result').innerHTML = 'Generating content...';
             try {
                 const response = await fetch('/.netlify/functions/api/generate', {
                     method: 'POST'
                 });
                 const data = await response.json();
-                
-                if (data.success) {
-                    const successful = data.results.filter(r => r.success).length;
-                    const total = data.results.length;
-                    showResult(`✅ Content Generated! Posted to ${successful}/${total} platforms. Results: ${data.results.map(r => `${r.platform}: ${r.success ? '✅' : '❌'}`).join(', ')}`, 'success');
-                } else {
-                    showResult(`❌ Generation Failed: ${data.error}`, 'error');
-                }
+                document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
             } catch (error) {
-                showResult(`❌ Generation Error: ${error.message}`, 'error');
+                document.getElementById('result').innerHTML = 'Error: ' + error.message;
             }
         }
-
-        // Test API when page loads
-        window.onload = function() {
-            showResult('Dashboard loaded. Click buttons to test functionality.', 'result');
-        };
     </script>
 </body>
 </html>
