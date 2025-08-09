@@ -1,6 +1,6 @@
 [build]
   publish = "public"
-  command = "npm run build"
+  command = "npm install"
   functions = "netlify/functions"
 
 [build.environment]
@@ -8,8 +8,13 @@
   NPM_VERSION = "9"
 
 [[redirects]]
+  from = "/dashboard"
+  to = "/.netlify/functions/api"
+  status = 200
+
+[[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/:splat"
+  to = "/.netlify/functions/api"
   status = 200
 
 [[redirects]]
