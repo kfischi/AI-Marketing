@@ -1,300 +1,114 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real Mute AI Marketing Dashboard</title>
+    <title>Real Mute Dashboard</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 20px;
-            background: #f0f0f0;
+        body { 
+            font-family: Arial; 
+            margin: 40px; 
+            background: #f5f5f5; 
         }
-        .header {
-            background: #2c3e50;
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            margin-bottom: 20px;
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 10px; 
         }
-        .card {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 10px 0;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        .btn {
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 15px 25px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin: 5px;
-            font-size: 16px;
-        }
-        .btn:hover { background: #2980b9; }
-        .btn.success { background: #27ae60; }
-        .btn.danger { background: #e74c3c; }
-        .status {
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 5px;
-            display: none;
-        }
-        .status.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .status.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .stats { display: flex; gap: 20px; margin: 20px 0; }
-        .stat-box { 
-            background: #34495e; 
+        .btn { 
+            background: #007bff; 
             color: white; 
+            border: none; 
+            padding: 12px 20px; 
+            margin: 10px 5px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+        }
+        .btn:hover { background: #0056b3; }
+        .result { 
+            background: #f8f9fa; 
             padding: 15px; 
-            border-radius: 8px; 
-            text-align: center; 
-            flex: 1; 
+            margin: 15px 0; 
+            border-radius: 5px; 
+            border-left: 4px solid #007bff; 
         }
-        .content-feed {
-            max-height: 400px;
-            overflow-y: auto;
-            border: 1px solid #ddd;
-            padding: 10px;
-            background: #f9f9f9;
-        }
-        .content-item {
-            background: white;
-            padding: 10px;
-            margin: 5px 0;
-            border-left: 4px solid #3498db;
-            border-radius: 4px;
-        }
-        .loading {
-            display: none;
-            text-align: center;
-            margin: 20px 0;
-        }
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 2s linear infinite;
-            margin: 0 auto;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        .error { border-left-color: #dc3545; }
+        .success { border-left-color: #28a745; }
     </style>
 </head>
 <body>
-    <div class="header">
+    <div class="container">
         <h1>🎺 Real Mute AI Marketing Dashboard</h1>
-        <p>Automated Social Media Content Generation</p>
-    </div>
-
-    <div class="stats">
-        <div class="stat-box">
-            <h3 id="totalGenerated">0</h3>
-            <p>Content Generated</p>
-        </div>
-        <div class="stat-box">
-            <h3 id="totalPosted">0</h3>
-            <p>Successfully Posted</p>
-        </div>
-        <div class="stat-box">
-            <h3 id="systemStatus">Loading...</h3>
-            <p>System Status</p>
-        </div>
-    </div>
-
-    <div class="card">
-        <h3>🎛️ Control Panel</h3>
-        <button class="btn" onclick="generateContent()">🚀 Generate & Post Content</button>
-        <button class="btn" onclick="testFacebook()">🧪 Test Facebook</button>
-        <button class="btn" onclick="refreshData()">🔄 Refresh Data</button>
-        <button class="btn danger" onclick="clearData()">🗑️ Clear All Data</button>
-    </div>
-
-    <div class="loading" id="loading">
-        <div class="spinner"></div>
-        <p>Processing...</p>
-    </div>
-
-    <div class="status" id="status"></div>
-
-    <div class="card">
-        <h3>📱 Recent AI-Generated Content</h3>
-        <div class="content-feed" id="contentFeed">
-            <p>No content generated yet. Click "Generate & Post Content" to start!</p>
-        </div>
-    </div>
-
-    <div class="card">
-        <h3>📊 System Information</h3>
-        <div id="systemInfo">
-            <p>Loading system information...</p>
-        </div>
+        <p>Simple dashboard to test and generate content</p>
+        
+        <h3>Quick Actions:</h3>
+        <button class="btn" onclick="testAPI()">📊 Test API</button>
+        <button class="btn" onclick="testFacebook()">📘 Test Facebook</button>
+        <button class="btn" onclick="generateContent()">🚀 Generate Content</button>
+        
+        <div id="result"></div>
     </div>
 
     <script>
-        const API_BASE = '/.netlify/functions/api';
-        
-        function showLoading() {
-            document.getElementById('loading').style.display = 'block';
+        function showResult(message, type = 'result') {
+            document.getElementById('result').innerHTML = 
+                `<div class="result ${type}"><strong>${new Date().toLocaleTimeString()}:</strong> ${message}</div>`;
         }
-        
-        function hideLoading() {
-            document.getElementById('loading').style.display = 'none';
-        }
-        
-        function showStatus(message, type = 'success') {
-            const status = document.getElementById('status');
-            status.textContent = message;
-            status.className = `status ${type}`;
-            status.style.display = 'block';
-            setTimeout(() => status.style.display = 'none', 5000);
-        }
-        
-        async function loadData() {
+
+        async function testAPI() {
+            showResult('Testing API connection...', 'result');
             try {
-                console.log('Loading data from:', API_BASE);
-                const response = await fetch(API_BASE);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
+                const response = await fetch('/.netlify/functions/api');
                 const data = await response.json();
-                console.log('Data received:', data);
+                showResult(`✅ API works! Stats: Generated: ${data.stats.totalGenerated}, Posted: ${data.stats.totalPosted}`, 'success');
+            } catch (error) {
+                showResult(`❌ API Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testFacebook() {
+            showResult('Testing Facebook posting...', 'result');
+            try {
+                const response = await fetch('/.netlify/functions/api/test-facebook', {
+                    method: 'POST'
+                });
+                const data = await response.json();
                 
-                if (data.success) {
-                    document.getElementById('totalGenerated').textContent = data.stats.totalGenerated || 0;
-                    document.getElementById('totalPosted').textContent = data.stats.totalPosted || 0;
-                    document.getElementById('systemStatus').textContent = 'Online';
-                    
-                    updateContentFeed(data.recentContent || []);
-                    showStatus('Dashboard loaded successfully');
+                if (data.result && data.result.success) {
+                    showResult(`✅ Facebook Success! Post ID: ${data.result.postId}`, 'success');
                 } else {
-                    throw new Error(data.error || 'Unknown error');
+                    showResult(`❌ Facebook Failed: ${data.result ? data.result.error : 'Unknown error'}`, 'error');
                 }
             } catch (error) {
-                console.error('Load data error:', error);
-                document.getElementById('systemStatus').textContent = 'Error';
-                showStatus(`Failed to load data: ${error.message}`, 'error');
+                showResult(`❌ Facebook Error: ${error.message}`, 'error');
             }
         }
-        
-        function updateContentFeed(content) {
-            const feed = document.getElementById('contentFeed');
-            
-            if (content.length === 0) {
-                feed.innerHTML = '<p>No content generated yet. Click "Generate & Post Content" to start!</p>';
-                return;
-            }
-            
-            feed.innerHTML = content.map(item => `
-                <div class="content-item">
-                    <strong>Content:</strong> ${item.text || 'No text'}<br>
-                    <strong>Generated:</strong> ${new Date(item.timestamp).toLocaleString()}<br>
-                    <strong>Results:</strong> ${item.results ? item.results.map(r => 
-                        `${r.platform}: ${r.success ? '✅' : '❌'}`
-                    ).join(', ') : 'No results'}
-                </div>
-            `).join('');
-        }
-        
+
         async function generateContent() {
-            showLoading();
+            showResult('Generating and posting content...', 'result');
             try {
-                console.log('Generating content...');
-                const response = await fetch(`${API_BASE}/generate`, { method: 'POST' });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
+                const response = await fetch('/.netlify/functions/api/generate', {
+                    method: 'POST'
+                });
                 const data = await response.json();
-                console.log('Generate result:', data);
                 
                 if (data.success) {
                     const successful = data.results.filter(r => r.success).length;
                     const total = data.results.length;
-                    showStatus(`Content generated! Posted to ${successful}/${total} platforms`);
-                    setTimeout(loadData, 1000);
+                    showResult(`✅ Content Generated! Posted to ${successful}/${total} platforms. Results: ${data.results.map(r => `${r.platform}: ${r.success ? '✅' : '❌'}`).join(', ')}`, 'success');
                 } else {
-                    showStatus(`Generation failed: ${data.error}`, 'error');
+                    showResult(`❌ Generation Failed: ${data.error}`, 'error');
                 }
             } catch (error) {
-                console.error('Generate error:', error);
-                showStatus(`Generation failed: ${error.message}`, 'error');
+                showResult(`❌ Generation Error: ${error.message}`, 'error');
             }
-            hideLoading();
         }
-        
-        async function testFacebook() {
-            showLoading();
-            try {
-                console.log('Testing Facebook...');
-                const response = await fetch(`${API_BASE}/test-facebook`, { method: 'POST' });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
-                const data = await response.json();
-                console.log('Facebook test result:', data);
-                
-                if (data.result && data.result.success) {
-                    showStatus('Facebook test successful! ✅');
-                } else {
-                    showStatus(`Facebook test failed: ${data.result ? data.result.error : 'Unknown error'}`, 'error');
-                }
-            } catch (error) {
-                console.error('Facebook test error:', error);
-                showStatus(`Facebook test failed: ${error.message}`, 'error');
-            }
-            hideLoading();
-        }
-        
-        async function refreshData() {
-            showLoading();
-            await loadData();
-            hideLoading();
-        }
-        
-        async function clearData() {
-            if (!confirm('Are you sure you want to clear all data?')) return;
-            
-            showLoading();
-            try {
-                const response = await fetch(`${API_BASE}/clear`, { method: 'POST' });
-                const data = await response.json();
-                
-                if (data.success) {
-                    showStatus('Data cleared successfully');
-                    loadData();
-                } else {
-                    showStatus('Failed to clear data', 'error');
-                }
-            } catch (error) {
-                showStatus(`Clear failed: ${error.message}`, 'error');
-            }
-            hideLoading();
-        }
-        
-        // Load data when page loads
-        window.addEventListener('load', () => {
-            console.log('Page loaded, loading data...');
-            loadData();
-        });
-        
-        // Auto-refresh every 30 seconds
-        setInterval(loadData, 30000);
+
+        // Test API when page loads
+        window.onload = function() {
+            showResult('Dashboard loaded. Click buttons to test functionality.', 'result');
+        };
     </script>
 </body>
 </html>
