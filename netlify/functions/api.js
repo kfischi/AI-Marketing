@@ -10,7 +10,7 @@ const CONFIG = {
     name: 'Real Mute Technologies',
     product: 'Real Mute',
     website: 'https://realmute.com',
-    landingPage: process.env.LANDING_PAGE_URL || 'https://ai-monster-marketing.netlify.app'
+    landingPage: process.env.LANDING_PAGE_URL || 'https://real-mute-lp.netlify.app'
   }
 };
 
@@ -64,7 +64,7 @@ Generate authentic, valuable content that musicians will engage with.
 
     try {
       const response = await axios.post(this.baseURL, {
-        model: 'claude-3-sonnet-20240229',
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 1500,
         messages: [{ role: 'user', content: prompt }]
       }, {
@@ -72,7 +72,8 @@ Generate authentic, valuable content that musicians will engage with.
           'Content-Type': 'application/json',
           'x-api-key': this.apiKey,
           'anthropic-version': '2023-06-01'
-        }
+        },
+        timeout: 30000
       });
 
       const content = response.data.content[0].text;
@@ -428,7 +429,10 @@ exports.handler = async (event, context) => {
 
       switch (action) {
         case 'generate':
+          console.log('Generate action called');
+          
           if (!CONFIG.CLAUDE_API_KEY) {
+            console.error('Claude API key missing');
             return {
               statusCode: 400,
               headers,
@@ -436,24 +440,42 @@ exports.handler = async (event, context) => {
             };
           }
 
+          console.log('Claude API key found, generating content...');
           const claude = new ClaudeAI(CONFIG.CLAUDE_API_KEY);
           const topic = contentTopics[Math.floor(Math.random() * contentTopics.length)];
-          const content = await claude.generateMultiPlatformContent(topic);
           
-          const contentItem = {
-            id: Date.now().toString(),
-            topic: topic,
-            content: content,
-            generatedAt: new Date().toISOString()
-          };
+          console.log('Selected topic:', topic);
+          
+          try {
+            const content = await claude.generateMultiPlatformContent(topic);
+            console.log('Content generated successfully');
+            
+            const contentItem = {
+              id: Date.now().toString(),
+              topic: topic,
+              content: content,
+              generatedAt: new Date().toISOString()
+            };
 
-          STORAGE.contentQueue.push(contentItem);
+            STORAGE.contentQueue.push(contentItem);
+            console.log('Content added to queue');
 
-          return {
-            statusCode: 200,
-            headers,
-            body: JSON.stringify({ success: true, content: contentItem })
-          };
+            return {
+              statusCode: 200,
+              headers,
+              body: JSON.stringify({ success: true, content: contentItem })
+            };
+          } catch (claudeError) {
+            console.error('Claude API Error:', claudeError.message);
+            return {
+              statusCode: 500,
+              headers,
+              body: JSON.stringify({ 
+                success: false, 
+                error: 'Failed to generate content: ' + claudeError.message 
+              })
+            };
+          }
 
         case 'post':
           if (!CONFIG.FACEBOOK_ACCESS_TOKEN || !CONFIG.FACEBOOK_PAGE_ID) {
