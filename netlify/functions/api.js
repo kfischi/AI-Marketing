@@ -1,4 +1,4 @@
-// 📁 netlify/functions/api.js - Copy this ENTIRE file
+// 📁 netlify/functions/api.js - Replace ENTIRE file with this:
 
 const fetch = require('node-fetch');
 
@@ -6,7 +6,7 @@ const fetch = require('node-fetch');
 let contentStore = [];
 let systemStats = { totalGenerated: 0, totalPosted: 0, errors: [] };
 
-// 🔥 SIMPLE Facebook function that works
+// Facebook function
 async function postToFacebook(content) {
   try {
     console.log('🔄 Facebook: Starting...');
@@ -21,7 +21,6 @@ async function postToFacebook(content) {
       return { success: false, platform: 'facebook', error: 'Missing credentials' };
     }
 
-    // Simple POST request
     const url = `https://graph.facebook.com/v19.0/${pageId}/feed`;
     const body = `message=${encodeURIComponent(content)}&access_token=${token}`;
     
@@ -106,6 +105,10 @@ async function postToLinkedIn(content) {
 // Content generation
 async function generateContent() {
   try {
+    if (!process.env.CLAUDE_API_KEY) {
+      throw new Error('Claude API key missing');
+    }
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -123,10 +126,19 @@ async function generateContent() {
       })
     });
 
+    if (!response.ok) {
+      throw new Error(`Claude API error: ${response.status}`);
+    }
+
     const data = await response.json();
-    return { text: data.content[0].text };
+    systemStats.totalGenerated++;
+    
+    return { 
+      text: data.content[0].text,
+      timestamp: new Date().toISOString()
+    };
   } catch (error) {
-    throw new Error('Content generation failed');
+    throw new Error(`Content generation failed: ${error.message}`);
   }
 }
 
@@ -154,16 +166,19 @@ async function publishContent() {
     
     const successful = results.filter(r => r.success).length;
     systemStats.totalPosted += successful;
-    systemStats.totalGenerated++;
     
     return results;
   } catch (error) {
+    console.error('Publishing error:', error);
     throw error;
   }
 }
 
-// Main handler
+// 🔥 MAIN HANDLER - FIXED JSON RESPONSES
 exports.handler = async (event, context) => {
+  console.log('🌐 API Request:', event.httpMethod, event.path);
+  
+  // CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -171,72 +186,193 @@ exports.handler = async (event, context) => {
     'Content-Type': 'application/json'
   };
 
+  // Handle OPTIONS (CORS preflight)
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
+    return {
+      statusCode: 200,
+      headers,
+      body: ''
+    };
   }
 
+  // Get path
   const path = event.path.replace('/.netlify/functions/api', '') || '/';
+  console.log('📍 Processed path:', path);
 
   try {
-    // Dashboard
+    // Route: Dashboard data (GET /)
     if (path === '/' && event.httpMethod === 'GET') {
+      const response = {
+        success: true,
+        stats: systemStats,
+        recentContent: contentStore.slice(0, 10),
+        timestamp: new Date().toISOString(),
+        message: 'Dashboard data loaded'
+      };
+      
+      console.log('📊 Dashboard response:', response);
+      
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify({
-          success: true,
-          stats: systemStats,
-          recentContent: contentStore.slice(0, 5)
-        })
+        body: JSON.stringify(response)
       };
     }
 
-    // Generate content
+    // Route: Generate content (POST /generate)
     if (path === '/generate' && event.httpMethod === 'POST') {
-      const results = await publishContent();
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
+      try {
+        const results = await publishContent();
+        
+        const response = {
           success: true,
+          message: 'Content generated and posted',
           results: results,
-          stats: systemStats
-        })
-      };
+          stats: systemStats,
+          timestamp: new Date().toISOString()
+        };
+        
+        console.log('✅ Generate success:', response);
+        
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify(response)
+        };
+      } catch (error) {
+        console.error('❌ Generate error:', error);
+        
+        const response = {
+          success: false,
+          error: error.message,
+          timestamp: new Date().toISOString()
+        };
+        
+        return {
+          statusCode: 500,
+          headers,
+          body: JSON.stringify(response)
+        };
+      }
     }
 
-    // Test Facebook
+    // Route: Test Facebook (POST /test-facebook)
     if (path === '/test-facebook' && event.httpMethod === 'POST') {
-      const result = await postToFacebook('🎺 Test from Real Mute!');
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ result })
-      };
+      try {
+        const testContent = '🎺 Test from Real Mute AI! ' + new Date().toLocaleTimeString();
+        const result = await postToFacebook(testContent);
+        
+        const response = {
+          success: true,
+          message: 'Facebook test completed',
+          result: result,
+          timestamp: new Date().toISOString()
+        };
+        
+        console.log('🧪 Facebook test:', response);
+        
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify(response)
+        };
+      } catch (error) {
+        console.error('❌ Facebook test error:', error);
+        
+        const response = {
+          success: false,
+          error: error.message,
+          timestamp: new Date().toISOString()
+        };
+        
+        return {
+          statusCode: 500,
+          headers,
+          body: JSON.stringify(response)
+        };
+      }
     }
 
-    // Clear data
+    // Route: Clear data (POST /clear)
     if (path === '/clear' && event.httpMethod === 'POST') {
       contentStore = [];
       systemStats = { totalGenerated: 0, totalPosted: 0, errors: [] };
+      
+      const response = {
+        success: true,
+        message: 'All data cleared',
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log('🗑️ Data cleared');
+      
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify({ success: true })
+        body: JSON.stringify(response)
       };
     }
 
+    // Route: Health check (GET /health)
+    if (path === '/health' && event.httpMethod === 'GET') {
+      const response = {
+        success: true,
+        status: 'healthy',
+        version: '1.0.0',
+        timestamp: new Date().toISOString(),
+        environment: {
+          hasClaudeKey: !!process.env.CLAUDE_API_KEY,
+          hasFacebookToken: !!process.env.FACEBOOK_PAGE_ACCESS_TOKEN,
+          hasFacebookPageId: !!process.env.FACEBOOK_PAGE_ID,
+          hasLinkedInToken: !!process.env.LINKEDIN_ACCESS_TOKEN
+        }
+      };
+      
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify(response)
+      };
+    }
+
+    // Default: 404 Not Found
+    const response = {
+      success: false,
+      error: 'Route not found',
+      path: path,
+      method: event.httpMethod,
+      availableRoutes: [
+        'GET /',
+        'POST /generate', 
+        'POST /test-facebook',
+        'POST /clear',
+        'GET /health'
+      ],
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log('❌ 404:', response);
+    
     return {
       statusCode: 404,
       headers,
-      body: JSON.stringify({ error: 'Not found' })
+      body: JSON.stringify(response)
     };
 
   } catch (error) {
+    console.error('❌ Unexpected error:', error);
+    
+    const response = {
+      success: false,
+      error: 'Internal server error',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    };
+    
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: error.message })
+      body: JSON.stringify(response)
     };
   }
 };
